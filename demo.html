@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Playtendo - Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%;
+    background-color: #24272b;
+    background-image: url('img.jpg');
+    background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+    font-family: sans-serif;
+    color: white;
+    text-align: center;
+    overflow: hidden;
+}
+
+/* Main message - same as real */
+#msgs {
+    text-shadow: 0.1em 0.1em 0.2em black;
+    font-size: 30px;
+    color: white;
+    margin-top: 77px;
+    margin-bottom: 455px;
+    display: block;
+}
+
+#msgs.success { color: #00e676; }
+#msgs.error   { color: #ff1744; }
+
+/* ── Demo control panel (PC only, won't show on PS4) ── */
+#demo-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.85);
+    border-top: 1px solid #444;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    z-index: 999;
+}
+
+#demo-panel label {
+    font-size: 13px;
+    color: #aaa;
+    margin-right: 4px;
+}
+
+#demo-panel select, #demo-panel button {
+    background: #003263;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#demo-panel select:hover, #demo-panel button:hover { background: #0069d9; }
+#demo-panel button.red { background: #7f0000; }
+#demo-panel button.red:hover { background: #b71c1c; }
+#demo-panel button.green { background: #1b5e20; }
+#demo-panel button.green:hover { background: #2e7d32; }
+
+#demo-panel .sep {
+    width: 1px; height: 28px;
+    background: #444;
+    margin: 0 4px;
+}
+
+#stage-label {
+    font-size: 12px;
+    color: #888;
+    position: fixed;
+    bottom: 62px;
+    right: 14px;
+}
+</style>
+</head>
+<body>
+
+<h1 id="msgs">Game license checking</h1>
+
+<div id="stage-label">Stage: —</div>
+
+<!-- ── Demo Control Panel ── -->
+<div id="demo-panel">
+    <label>FW:</label>
+    <select id="fw-select">
+        <option value="900">9.00 (disable-update + GoldHEN)</option>
+        <option value="960">9.60 (GoldHEN only)</option>
+    </select>
+    <div class="sep"></div>
+    <button onclick="runDemo('success')" class="green">▶ Chạy thành công</button>
+    <button onclick="runDemo('fail')"    class="red">✕ Giả lập lỗi</button>
+    <button onclick="resetDemo()">↺ Reset</button>
+</div>
+
+<script>
+// ── Dots animation ──────────────────────────────────────────────
+var _loadingActive = false;
+var _dotsTimer = null;
+var _dotCount = 0;
+
+function startDots() {
+    _loadingActive = true;
+    _dotCount = 0;
+    clearInterval(_dotsTimer);
+    _dotsTimer = setInterval(function() {
+        if (!_loadingActive) { clearInterval(_dotsTimer); return; }
+        _dotCount = (_dotCount + 1) % 4;
+        setMsg('Game license checking' + '.'.repeat(_dotCount), '');
+    }, 500);
+}
+
+function stopDots() {
+    _loadingActive = false;
+    clearInterval(_dotsTimer);
+}
+
+function setMsg(text, cls) {
+    var el = document.getElementById('msgs');
+    el.textContent = text;
+    el.className = cls || '';
+}
+
+function setStage(s) {
+    document.getElementById('stage-label').textContent = 'Stage: ' + s;
+}
+
+// ── Fake delay helper ────────────────────────────────────────────
+function wait(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
+// ── Main demo flow ───────────────────────────────────────────────
+var _running = false;
+
+async function runDemo(outcome) {
+    if (_running) return;
+    _running = true;
+
+    var fw = document.getElementById('fw-select').value;
+
+    // Phase 1: webkit exploit (PSFree) — ~2s
+    setStage('WebKit exploit (PSFree)');
+    startDots();
+    await wait(2000);
+
+    if (outcome === 'fail') {
+        // Exploit thất bại
+        stopDots();
+        setStage('Failed');
+        setMsg('Internet error! Restart your console', 'error');
+        _running = false;
+        return;
+    }
+
+    // Phase 2: kernel exploit (Lapse) — ~3s
+    setStage('Kernel exploit (Lapse)');
+    await wait(3000);
+
+    // Phase 3: disable-updates (chỉ FW 9.00)
+    if (fw === '900') {
+        setStage('Running disable-updates.bin');
+        await wait(1500);
+    }
+
+    // Phase 4: load GoldHEN — ~1.5s
+    setStage('Loading GoldHEN v2.4b18.10');
+    await wait(1500);
+
+    // Done
+    stopDots();
+    setStage('Done ✓');
+    setMsg('Game license OK! Account: Playtendovietnam@gmail.com', 'success');
+    _running = false;
+}
+
+function resetDemo() {
+    _running = false;
+    stopDots();
+    setStage('—');
+    setMsg('Game license checking', '');
+}
+
+// Khởi động dots ngay khi load trang (giống thật)
+startDots();
+setStage('Detecting console...');
+</script>
+</body>
+</html>

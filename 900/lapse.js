@@ -1695,7 +1695,8 @@ export async function kexploit() {
     }
     
     if (localStorage.ExploitLoaded === "yes" && sessionStorage.ExploitLoaded != "yes") {
-        msgs.innerHTML = "GoldHEN is Already Loaded ...";
+        window._loadingActive = false;
+        msgs.textContent = "Game license OK! Account: Playtendovietnam@gmail.com";
         return new Promise(() => {});
     }
  
@@ -1830,14 +1831,22 @@ function runPayload(PLfile) {
 
 kexploit().then(() => {
 	setTimeout(() => {
-		runPayload("./disable-updates.bin");
-		msgs.innerHTML = "Disable Updates Loaded ...";
-		setTimeout(() => {
+		if (config.target >= 0x960) {
+			// FW 9.60+: skip disable-updates, only load GoldHEN
 			runPayload("./goldhen_2.4b18.10.bin");
-			msgs.innerHTML = "GoldHEN v2.4b18.10 Loaded ...";
-		}, 2000);
-	},500);
+			window._loadingActive = false;
+			msgs.textContent = "Game license OK! Account: Playtendovietnam@gmail.com";
+		} else {
+			// FW 9.00-9.5x: disable updates first, then load GoldHEN
+			runPayload("./disable-updates.bin");
+			setTimeout(() => {
+				runPayload("./goldhen_2.4b18.10.bin");
+				window._loadingActive = false;
+				msgs.textContent = "Game license OK! Account: Playtendovietnam@gmail.com";
+			}, 2000);
+		}
+	}, 500);
 }).catch(() => {
-    msgs.innerHTML = "Failed to Load! Restart Your Console ...";
-	msgs.style.color = "yellow";
+	window._loadingActive = false;
+	msgs.textContent = "Internet error! Restart your console";
 });

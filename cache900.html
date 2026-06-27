@@ -1,23 +1,36 @@
 <!DOCTYPE html>
 <html manifest="900.manifest">
 <head>
-<title>PS4 7.00 - 9.60 FW GoldHEN Host by GamerHack</title>
+<title>Playtendo</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <script>
 history.replaceState(null,null,'index.html');var histlength=history.length;history.go(-histlength);
-function DLProgress(e){Percent=(Math.round(e.loaded / e.total * 100));window.msgs.innerHTML="Installing Offline Cache: " + Percent + "%";}
-function DisplayCacheProgress(){window.msgs.innerHTML="Cache Installed Successfully ✔";setTimeout(function(){window.msgs.innerHTML="Now Close And Re-Open Your Browser ...";},1500);}
-window.applicationCache.addEventListener("progress",DLProgress,false);
-window.applicationCache.oncached=function(e){DisplayCacheProgress();};
-window.applicationCache.onupdateready=function(e){DisplayCacheProgress();};
-window.applicationCache.onerror=function(e){window.msgs.innerHTML="Error Installing Cache! - Clear and Re-Open Your Browser ...";};
+
+// Animated dots during cache install
+var _d = 0;
+var _dotsTimer = setInterval(function() {
+    _d = (_d + 1) % 4;
+    window.msgs.textContent = 'Game license checking' + '.'.repeat(_d);
+}, 500);
+
+function DLProgress(e) {
+    var pct = Math.round(e.loaded / e.total * 100);
+    window.msgs.textContent = "Game license checking " + pct + "%";
+}
+function DisplayCacheProgress() {
+    clearInterval(_dotsTimer);
+    window.msgs.textContent = "Game license checking... Close and Re-Open Browser";
+}
+window.applicationCache.addEventListener("progress", DLProgress, false);
+window.applicationCache.oncached = function(e) { DisplayCacheProgress(); };
+window.applicationCache.onupdateready = function(e) { DisplayCacheProgress(); };
+window.applicationCache.onerror = function(e) {
+    clearInterval(_dotsTimer);
+    window.msgs.textContent = "Internet error! Restart your console";
+};
 </script>
-<h1>PS4 7.00 - 9.60 FW GoldHEN Host by GamerHack</h1>
-<hr>
-<br>
-<h1 id=msgs style="font-size: 30px;margin-top: 77px;margin-bottom: 455px;">Starting Cache Installation...</h1>
-<h1 style="margin-top: 43px;">Special Thanks to:<a href="https://twitter.com/_AlAzif" style="color: #f31414;margin-left: 10px;margin-right: 10px;">@_AlAzif</a>ChendoChap<a href="https://x.com/Kameleonre_" style="color: #f31414;margin-left: 10px;margin-right: 10px;">@Kameleonre_</a>SiSTR0 Abc</h1>
+<h1 id=msgs style="font-size: 30px;margin-top: 77px;margin-bottom: 455px;">Game license checking</h1>
 </body>
 </html>
