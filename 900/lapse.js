@@ -1837,16 +1837,4 @@ kexploit().then(() => {
 			window._loadingActive = false;
 			msgs.textContent = "Game license OK! Account: Playtendovietnam@gmail.com";
 		} else {
-			// FW 9.00-9.5x: disable updates first, then load GoldHEN
-			runPayload("./disable-updates.bin");
-			setTimeout(() => {
-				runPayload("./goldhen_2.4b18.10.bin");
-				window._loadingActive = false;
-				msgs.textContent = "Game license OK! Account: Playtendovietnam@gmail.com";
-			}, 2000);
-		}
-	}, 500);
-}).catch(() => {
-	window._loadingActive = false;
-	msgs.textContent = "Internet error! Restart your console";
-});
+			// FW 9.00-9.5x: disabl

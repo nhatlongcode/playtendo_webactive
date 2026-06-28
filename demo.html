@@ -18,104 +18,131 @@ html, body {
     overflow: hidden;
 }
 
-/* Main message - same as real */
 #msgs {
     text-shadow: 0.1em 0.1em 0.2em black;
     font-size: 30px;
     color: white;
     margin-top: 77px;
-    margin-bottom: 455px;
     display: block;
 }
-
 #msgs.success { color: #00e676; }
 #msgs.error   { color: #ff1744; }
 
-/* ── Demo control panel (PC only, won't show on PS4) ── */
+/* ── Demo control panel ── */
 #demo-panel {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.88);
     border-top: 1px solid #444;
-    padding: 14px 20px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
     z-index: 999;
+    font-size: 13px;
 }
 
-#demo-panel label {
-    font-size: 13px;
-    color: #aaa;
-    margin-right: 4px;
-}
+#demo-panel label { color: #aaa; }
 
 #demo-panel select, #demo-panel button {
     background: #003263;
     color: white;
     border: none;
     border-radius: 4px;
-    padding: 7px 14px;
+    padding: 7px 13px;
     font-size: 13px;
     cursor: pointer;
     transition: background 0.2s;
 }
 #demo-panel select:hover, #demo-panel button:hover { background: #0069d9; }
-#demo-panel button.red { background: #7f0000; }
-#demo-panel button.red:hover { background: #b71c1c; }
 #demo-panel button.green { background: #1b5e20; }
 #demo-panel button.green:hover { background: #2e7d32; }
-
-#demo-panel .sep {
-    width: 1px; height: 28px;
-    background: #444;
-    margin: 0 4px;
-}
+#demo-panel button.red { background: #7f0000; }
+#demo-panel button.red:hover { background: #b71c1c; }
+#demo-panel button.gray { background: #333; }
+#demo-panel button.gray:hover { background: #555; }
+.sep { width: 1px; height: 26px; background: #444; margin: 0 2px; }
 
 #stage-label {
-    font-size: 12px;
-    color: #888;
+    font-size: 11px;
+    color: #666;
     position: fixed;
-    bottom: 62px;
-    right: 14px;
+    bottom: 52px;
+    right: 12px;
+    pointer-events: none;
+}
+
+/* Progress bar (cache phase) */
+#progress-bar-wrap {
+    display: none;
+    margin-top: 18px;
+}
+#progress-bar-bg {
+    width: 340px;
+    height: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+#progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #0069d9;
+    border-radius: 3px;
+    transition: width 0.3s linear;
 }
 </style>
 </head>
 <body>
 
 <h1 id="msgs">Game license checking</h1>
+<div id="progress-bar-wrap">
+    <div id="progress-bar-bg">
+        <div id="progress-bar-fill"></div>
+    </div>
+</div>
 
 <div id="stage-label">Stage: —</div>
 
-<!-- ── Demo Control Panel ── -->
 <div id="demo-panel">
+    <label>Visit:</label>
+    <select id="visit-select">
+        <option value="first">Lần đầu (install cache)</option>
+        <option value="second">Lần sau (chạy exploit)</option>
+    </select>
+
     <label>FW:</label>
     <select id="fw-select">
-        <option value="900">9.00 (disable-update + GoldHEN)</option>
-        <option value="960">9.60 (GoldHEN only)</option>
+        <option value="900">9.00</option>
+        <option value="960">9.60</option>
     </select>
+
     <div class="sep"></div>
-    <button onclick="runDemo('success')" class="green">▶ Chạy thành công</button>
-    <button onclick="runDemo('fail')"    class="red">✕ Giả lập lỗi</button>
-    <button onclick="resetDemo()">↺ Reset</button>
+
+    <button class="green" onclick="runDemo('success')">▶ Chạy</button>
+    <button class="red"   onclick="runDemo('fail')">✕ Lỗi</button>
+    <button class="gray"  onclick="resetDemo()">↺ Reset</button>
 </div>
 
 <script>
-// ── Dots animation ──────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────
 var _loadingActive = false;
 var _dotsTimer = null;
 var _dotCount = 0;
+var _running = false;
 
-function startDots() {
+function startDots(baseText) {
+    baseText = baseText || 'Game license checking';
     _loadingActive = true;
     _dotCount = 0;
     clearInterval(_dotsTimer);
     _dotsTimer = setInterval(function() {
         if (!_loadingActive) { clearInterval(_dotsTimer); return; }
         _dotCount = (_dotCount + 1) % 4;
-        setMsg('Game license checking' + '.'.repeat(_dotCount), '');
+        setMsg(baseText + '.'.repeat(_dotCount), '');
     }, 500);
 }
 
@@ -134,63 +161,130 @@ function setStage(s) {
     document.getElementById('stage-label').textContent = 'Stage: ' + s;
 }
 
-// ── Fake delay helper ────────────────────────────────────────────
-function wait(ms) {
-    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+function setProgress(pct) {
+    document.getElementById('progress-bar-fill').style.width = pct + '%';
 }
 
-// ── Main demo flow ───────────────────────────────────────────────
-var _running = false;
+function showBar(show) {
+    document.getElementById('progress-bar-wrap').style.display = show ? 'block' : 'none';
+}
 
-async function runDemo(outcome) {
-    if (_running) return;
-    _running = true;
+function wait(ms) {
+    return new Promise(function(r) { setTimeout(r, ms); });
+}
 
-    var fw = document.getElementById('fw-select').value;
+// ── Animate progress bar from 0 → 100 over `ms` ms ──────────────
+async function animateProgress(ms) {
+    var steps = 30;
+    var interval = ms / steps;
+    for (var i = 1; i <= steps; i++) {
+        setProgress(Math.round((i / steps) * 100));
+        // slow down near the end to feel realistic
+        var delay = i < steps * 0.7 ? interval * 0.7 : interval * 1.6;
+        await wait(delay);
+    }
+}
 
-    // Phase 1: webkit exploit (PSFree) — ~2s
-    setStage('WebKit exploit (PSFree)');
+// ── FLOW: First visit — install cache ────────────────────────────
+async function flowFirstVisit(outcome) {
+    setStage('Redirecting to cache900.html');
     startDots();
-    await wait(2000);
+    await wait(800);
+
+    // Start cache download
+    setStage('Downloading cache');
+    showBar(true);
+    setProgress(0);
+    stopDots();
 
     if (outcome === 'fail') {
-        // Exploit thất bại
-        stopDots();
-        setStage('Failed');
+        await wait(600);
         setMsg('Internet error! Restart your console', 'error');
-        _running = false;
+        showBar(false);
+        setStage('Cache error');
         return;
     }
 
-    // Phase 2: kernel exploit (Lapse) — ~3s
+    // Animate download progress — show % in text
+    var steps = 20;
+    var totalMs = 3000;
+    var interval = totalMs / steps;
+    for (var i = 1; i <= steps; i++) {
+        var pct = Math.round((i / steps) * 100);
+        setProgress(pct);
+        setMsg('Game license checking ' + pct + '%', '');
+        var delay = i < steps * 0.6 ? interval * 0.7 : interval * 1.5;
+        await wait(delay);
+    }
+
+    // Cache done
+    showBar(false);
+    setStage('Cache installed ✓');
+    setMsg('Game license checking... Close and Re-Open Browser', '');
+}
+
+// ── FLOW: Second visit — run exploit ─────────────────────────────
+async function flowSecondVisit(outcome) {
+    var fw = document.getElementById('fw-select').value;
+
+    // Phase 1: WebKit exploit (PSFree) — user sees dots
+    setStage('WebKit exploit (PSFree)');
+    startDots();
+    await wait(2200);
+
+    if (outcome === 'fail') {
+        stopDots();
+        setStage('Failed');
+        setMsg('Internet error! Restart your console', 'error');
+        return;
+    }
+
+    // Phase 2: Kernel exploit (Lapse)
     setStage('Kernel exploit (Lapse)');
     await wait(3000);
 
-    // Phase 3: disable-updates (chỉ FW 9.00)
+    // Phase 3: disable-updates — chỉ FW 9.00
     if (fw === '900') {
-        setStage('Running disable-updates.bin');
-        await wait(1500);
+        setStage('disable-updates.bin');
+        await wait(1200);
     }
 
-    // Phase 4: load GoldHEN — ~1.5s
-    setStage('Loading GoldHEN v2.4b18.10');
-    await wait(1500);
+    // Phase 4: GoldHEN
+    setStage('GoldHEN v2.4b18.10');
+    await wait(1200);
 
     // Done
     stopDots();
     setStage('Done ✓');
     setMsg('Game license OK! Account: Playtendovietnam@gmail.com', 'success');
+}
+
+// ── Entry point ───────────────────────────────────────────────────
+async function runDemo(outcome) {
+    if (_running) return;
+    _running = true;
+
+    var visit = document.getElementById('visit-select').value;
+
+    if (visit === 'first') {
+        await flowFirstVisit(outcome);
+    } else {
+        await flowSecondVisit(outcome);
+    }
+
     _running = false;
 }
 
 function resetDemo() {
     _running = false;
     stopDots();
+    showBar(false);
+    setProgress(0);
     setStage('—');
     setMsg('Game license checking', '');
 }
 
-// Khởi động dots ngay khi load trang (giống thật)
+// Init
 startDots();
 setStage('Detecting console...');
 </script>
